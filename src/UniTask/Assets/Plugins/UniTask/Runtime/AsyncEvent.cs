@@ -41,7 +41,7 @@ namespace Cysharp.Threading.Tasks
             asyncProperty.Value = value;
         }
         public UniTask Task => WaitAsync();
-        public UniTask WaitAsync(CancellationToken cancellationToken = default)
+        public UniTask<T> WaitAsync(CancellationToken cancellationToken = default)
         {
             return asyncProperty.WaitAsync(cancellationToken);
         }
