@@ -4,267 +4,260 @@ using UnityEngine;
 
 namespace Cysharp.Threading.Tasks
 {
-	public interface ITriggerHandler<T>
-	{
-		void OnNext(T value);
-		void OnError(Exception ex);
-		void OnCompleted();
-		void OnCanceled(CancellationToken cancellationToken);
+    public interface ITriggerHandler<T>
+    {
+        void OnNext(T value);
+        void OnError(Exception ex);
+        void OnCompleted();
+        void OnCanceled(CancellationToken cancellationToken);
 
-		// set/get from TriggerEvent<T>
-		ITriggerHandler<T> Prev { get; set; }
-		ITriggerHandler<T> Next { get; set; }
-	}
+        // set/get from TriggerEvent<T>
+        ITriggerHandler<T> Prev { get; set; }
+        ITriggerHandler<T> Next { get; set; }
+    }
 
-	// be careful to use, itself is struct.
-	public struct TriggerEvent<T>
-	{
-		ITriggerHandler<T> head; // head.prev is last
-		ITriggerHandler<T> iteratingHead;
+    // be careful to use, itself is struct.
+    public struct TriggerEvent<T>
+    {
+        ITriggerHandler<T> head; // head.prev is last
+        ITriggerHandler<T> iteratingHead;
 
-		bool preserveRemoveSelf;
-		ITriggerHandler<T> iteratingNode;
+        bool preserveRemoveSelf;
+        ITriggerHandler<T> iteratingNode;
 
-		void LogError(Exception ex)
-		{
+        void LogError(Exception ex)
+        {
 #if UNITY_2018_3_OR_NEWER
-			UnityEngine.Debug.LogException(ex);
+            UnityEngine.Debug.LogException(ex);
 #else
             Console.WriteLine(ex);
 #endif
-		}
-		const bool debug = false;
-		public void SetResult(T value)
-		{
-			if (debug)
-				Debug.Log("Set");
-			if (iteratingNode != null)
-			{
-				throw new InvalidOperationException("Can not trigger itself in iterating.");
-			}
+        }
+        public void SetResult(T value)
+        {
+            if (iteratingNode != null)
+            {
+                throw new InvalidOperationException("Can not trigger itself in iterating.");
+            }
 
-			var h = head;
-			while (h != null)
-			{
-				iteratingNode = h;
-				var next = h.Next;
-				try
-				{
-					h.OnNext(value);
-				}
-				catch (Exception ex)
-				{
-					LogError(ex);
-					Remove(h);
-				}
-				h = next;
-			}
+            var h = head;
+            while (h != null)
+            {
+                iteratingNode = h;
+                var next = h.Next;
+                try
+                {
+                    h.OnNext(value);
+                }
+                catch (Exception ex)
+                {
+                    LogError(ex);
+                    Remove(h);
+                }
+                h = next;
+            }
 
-			iteratingNode = null;
-			if (iteratingHead != null)
-			{
-				Add(iteratingHead);
-				iteratingHead = null;
-			}
-		}
+            iteratingNode = null;
+            if (iteratingHead != null)
+            {
+                Add(iteratingHead);
+                iteratingHead = null;
+            }
+        }
 
-		public void SetCanceled(CancellationToken cancellationToken)
-		{
-			if (iteratingNode != null)
-			{
-				throw new InvalidOperationException("Can not trigger itself in iterating.");
-			}
+        public void SetCanceled(CancellationToken cancellationToken)
+        {
+            if (iteratingNode != null)
+            {
+                throw new InvalidOperationException("Can not trigger itself in iterating.");
+            }
 
-			var h = head;
-			while (h != null)
-			{
-				iteratingNode = h;
-				var next = h.Next;
-				try
-				{
-					h.OnCanceled(cancellationToken);
-				}
-				catch (Exception ex)
-				{
-					LogError(ex);
-				}
-				Remove(h);
-				h = next;
-			}
+            var h = head;
+            while (h != null)
+            {
+                iteratingNode = h;
+                var next = h.Next;
+                try
+                {
+                    h.OnCanceled(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    LogError(ex);
+                }
+                Remove(h);
+                h = next;
+            }
 
-			iteratingNode = null;
-			if (iteratingHead != null)
-			{
-				Add(iteratingHead);
-				iteratingHead = null;
-			}
-		}
+            iteratingNode = null;
+            if (iteratingHead != null)
+            {
+                Add(iteratingHead);
+                iteratingHead = null;
+            }
+        }
 
-		public void SetCompleted()
-		{
-			if (iteratingNode != null)
-			{
-				throw new InvalidOperationException("Can not trigger itself in iterating.");
-			}
+        public void SetCompleted()
+        {
+            if (iteratingNode != null)
+            {
+                throw new InvalidOperationException("Can not trigger itself in iterating.");
+            }
 
-			var h = head;
-			while (h != null)
-			{
-				iteratingNode = h;
-				var next = h.Next;
-				try
-				{
-					h.OnCompleted();
-				}
-				catch (Exception ex)
-				{
-					LogError(ex);
-				}
-				Remove(h);
-				h = next;
-			}
+            var h = head;
+            while (h != null)
+            {
+                iteratingNode = h;
+                var next = h.Next;
+                try
+                {
+                    h.OnCompleted();
+                }
+                catch (Exception ex)
+                {
+                    LogError(ex);
+                }
+                Remove(h);
+                h = next;
+            }
 
-			iteratingNode = null;
-			if (iteratingHead != null)
-			{
-				Add(iteratingHead);
-				iteratingHead = null;
-			}
-		}
+            iteratingNode = null;
+            if (iteratingHead != null)
+            {
+                Add(iteratingHead);
+                iteratingHead = null;
+            }
+        }
 
-		public void SetError(Exception exception)
-		{
-			if (iteratingNode != null)
-			{
-				throw new InvalidOperationException("Can not trigger itself in iterating.");
-			}
+        public void SetError(Exception exception)
+        {
+            if (iteratingNode != null)
+            {
+                throw new InvalidOperationException("Can not trigger itself in iterating.");
+            }
 
-			var h = head;
-			while (h != null)
-			{
-				iteratingNode = h;
-				var next = h.Next;
-				try
-				{
-					h.OnError(exception);
-				}
-				catch (Exception ex)
-				{
-					LogError(ex);
-				}
-				Remove(h);
-				h = next;
-			}
+            var h = head;
+            while (h != null)
+            {
+                iteratingNode = h;
+                var next = h.Next;
+                try
+                {
+                    h.OnError(exception);
+                }
+                catch (Exception ex)
+                {
+                    LogError(ex);
+                }
+                Remove(h);
+                h = next;
+            }
 
-			iteratingNode = null;
-			if (iteratingHead != null)
-			{
-				Add(iteratingHead);
-				iteratingHead = null;
-			}
-		}
+            iteratingNode = null;
+            if (iteratingHead != null)
+            {
+                Add(iteratingHead);
+                iteratingHead = null;
+            }
+        }
 
-		public void Add(ITriggerHandler<T> handler)
-		{
-			if (debug)
-				Debug.Log("Add");
-			if (handler == null) throw new ArgumentNullException(nameof(handler));
+        public void Add(ITriggerHandler<T> handler)
+        {
+            if (handler == null) throw new ArgumentNullException(nameof(handler));
 
-			// zero node.
-			if (head == null)
-			{
-				head = handler;
-				return;
-			}
+            // zero node.
+            if (head == null)
+            {
+                head = handler;
+                return;
+            }
 
-			if (iteratingNode != null)
-			{
-				if (iteratingHead == null)
-				{
-					iteratingHead = handler;
-					return;
-				}
+            if (iteratingNode != null)
+            {
+                if (iteratingHead == null)
+                {
+                    iteratingHead = handler;
+                    return;
+                }
 
-				var last = iteratingHead.Prev;
-				if (last == null)
-				{
-					// single node.
-					iteratingHead.Prev = handler;
-					iteratingHead.Next = handler;
-					handler.Prev = iteratingHead;
-				}
-				else
-				{
-					// multi node
-					iteratingHead.Prev = handler;
-					last.Next = handler;
-					handler.Prev = last;
-				}
-			}
-			else
-			{
-				var last = head.Prev;
-				if (last == null)
-				{
-					// single node.
-					head.Prev = handler;
-					head.Next = handler;
-					handler.Prev = head;
-				}
-				else
-				{
-					// multi node
-					head.Prev = handler;
-					last.Next = handler;
-					handler.Prev = last;
-				}
-			}
-		}
+                var last = iteratingHead.Prev;
+                if (last == null)
+                {
+                    // single node.
+                    iteratingHead.Prev = handler;
+                    iteratingHead.Next = handler;
+                    handler.Prev = iteratingHead;
+                }
+                else
+                {
+                    // multi node
+                    iteratingHead.Prev = handler;
+                    last.Next = handler;
+                    handler.Prev = last;
+                }
+            }
+            else
+            {
+                var last = head.Prev;
+                if (last == null)
+                {
+                    // single node.
+                    head.Prev = handler;
+                    head.Next = handler;
+                    handler.Prev = head;
+                }
+                else
+                {
+                    // multi node
+                    head.Prev = handler;
+                    last.Next = handler;
+                    handler.Prev = last;
+                }
+            }
+        }
 
-		public void Remove(ITriggerHandler<T> handler)
-		{
-			if (handler == null) throw new ArgumentNullException(nameof(handler));
+        public void Remove(ITriggerHandler<T> handler)
+        {
+            if (handler == null) throw new ArgumentNullException(nameof(handler));
 
-			if (debug)
-				Debug.Log("Remove");
-			var prev = handler.Prev;
-			var next = handler.Next;
+            var prev = handler.Prev;
+            var next = handler.Next;
 
-			if (next != null)
-			{
-				next.Prev = prev;
-			}
+            if (next != null)
+            {
+                next.Prev = prev;
+            }
 
-			if (handler == head)
-			{
-				head = next;
-			}
-			else
-			{
-				// when handler is head, prev indicate last so don't use it.
-				if (prev != null)
-				{
-					prev.Next = next;
-				}
-			}
+            if (handler == head)
+            {
+                head = next;
+            }
+            else
+            {
+                // when handler is head, prev indicate last so don't use it.
+                if (prev != null)
+                {
+                    prev.Next = next;
+                }
+            }
 
-			if (head != null)
-			{
-				if (head.Prev == handler)
-				{
-					if (prev != head)
-					{
-						head.Prev = prev;
-					}
-					else
-					{
-						head.Prev = null;
-					}
-				}
-			}
+            if (head != null)
+            {
+                if (head.Prev == handler)
+                {
+                    if (prev != head)
+                    {
+                        head.Prev = prev;
+                    }
+                    else
+                    {
+                        head.Prev = null;
+                    }
+                }
+            }
 
-			handler.Prev = null;
-			handler.Next = null;
-		}
-	}
+            handler.Prev = null;
+            handler.Next = null;
+        }
+    }
 }
