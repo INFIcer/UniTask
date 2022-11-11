@@ -36,10 +36,14 @@ namespace Cysharp.Threading.Tasks
 		{
 			asyncProperty = new AsyncReactiveProperty<T>(value);
 		}
-		public void Set(T value)
+		public T Value
 		{
-			if (!asyncProperty.Value.Equals(value))
-				asyncProperty.Value = value;
+			get => asyncProperty.Value;
+			set
+			{
+				if (!asyncProperty.Value.Equals(value))
+					asyncProperty.Value = value;
+			}
 		}
 		public UniTask<T> Task => WaitAsync();
 		public UniTask<T> WaitAsync(CancellationToken cancellationToken = default)
